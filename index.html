@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Discador Automático William</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { margin: 5px; padding: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .green-lamp { color: green; font-weight: bold; }
+        .red-lamp { color: red; font-weight: bold; }
+        textarea { width: 95%; height: 50px; }
+    </style>
+</head>
+<body>
+<h1>Discador Automático William</h1>
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt" />
+<button id="exportListBtn" disabled>Exportar Tentativas</button>
+<button id="exportHistoryBtn" disabled>Gerar Histórico</button>
+<button id="clearStorageBtn">Limpar Dados</button>
+
+<h2>Lista Principal</h2>
+<table id="mainTable">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Ações</th></tr></thead>
+    <tbody></tbody>
+</table>
+
+<h2>Lista de Tentativas</h2>
+<table id="attemptsTable">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead>
+    <tbody></tbody>
+</table>
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+(() => {
+    let contacts = [];
+    let attempts = JSON.parse(localStorage.getItem('attempts')) || [];
+    const fileInput = document.getElementById('fileInput');
+    const mainTableBody = document.querySelector('#mainTable tbody');
+    const attemptsTableBody = document.querySelector('#attemptsTable tbody');
+    const exportListBtn = document.getElementById('exportListBtn');
+    const exportHistoryBtn = document.getElementById('exportHistoryBtn');
+    const clearStorageBtn = document.getElementById('clearStorageBtn');
+
+    function formatLink(tel) {
+        tel = tel.replace(/\D/g, '');
+        if (tel.length < 10) return null;
+        const ddd = tel.slice(0, 2);
+        return (ddd !== '19' ? '+050' : '+55') + tel;
+    }
+
+    function loadMainTable() {
+        mainTableBody.innerHTML = '';
+        contacts.forEach((c, i) => {
+            const jaLigado = attempts.some(a => a.telefone === c.telefone);
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td>\${c.nome}</td>
+                <td>\${c.telefone}</td>
+                <td><button data-index="\${i}" \${jaLigado ? 'style="background-color: red; color: white;"' : ''}>Ligar</button></td>
+            \`;
+            mainTableBody.appendChild(tr);
+        });
+        exportListBtn.disabled = attempts.length === 0;
+        exportHistoryBtn.disabled = attempts.length === 0;
+    }
+
+    function loadAttemptsTable() {
+        attemptsTableBody.innerHTML = '';
+        attempts.forEach((a, i) => {
+            const statusLamp = a.status === 'atendeu' ? '<span class="green-lamp">&#128161;</span>' :
+                a.status === 'caixa' ? '<span class="red-lamp">&#128308;</span>' : '';
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td>\${a.nome}</td>
+                <td>\${a.telefone}</td>
+                <td>\${statusLamp}</td>
+                <td><textarea class="obs-text" data-index="\${i}">\${a.observacao || ''}</textarea></td>
+                <td>
+                    <button data-index="\${i}" class="btn-atendeu">Atendeu</button>
+                    <button data-index="\${i}" class="btn-caixa">Caixa Postal</button>
+                    <button data-index="\${i}" class="btn-voltar">Voltar</button>
+                </td>
+            \`;
+            attemptsTableBody.appendChild(tr);
+        });
+    }
+
+    function saveAttempts() {
+        localStorage.setItem('attempts', JSON.stringify(attempts));
+    }
+
+    mainTableBody.addEventListener('click', e => {
+        if (e.target.tagName === 'BUTTON') {
+            const i = e.target.getAttribute('data-index');
+            const c = contacts[i];
+            if (attempts.some(a => a.telefone === c.telefone)) {
+                alert('Este número já foi ligado anteriormente.');
+                return;
+            }
+            const telLink = formatLink(c.telefone);
+            if (!telLink) {
+                alert('Telefone inválido: ' + c.telefone);
+                return;
+            }
+            window.open(\`tel:\${telLink}\`, '_self');
+            e.target.style.backgroundColor = '#4CAF50';
+            e.target.style.color = 'white';
+            e.target.dataset.clicked = 'true';
+            const now = new Date().toISOString();
+            attempts.push({nome: c.nome, telefone: c.telefone, status: '', observacao: '', data: now});
+            saveAttempts();
+            loadMainTable();
+            loadAttemptsTable();
+        }
+    });
+
+    attemptsTableBody.addEventListener('click', e => {
+        const i = e.target.getAttribute('data-index');
+        if (!i) return;
+        if (e.target.classList.contains('btn-atendeu')) {
+            attempts[i].status = 'atendeu';
+        } else if (e.target.classList.contains('btn-caixa')) {
+            attempts[i].status = 'caixa';
+        } else if (e.target.classList.contains('btn-voltar')) {
+            const contato = attempts.splice(i, 1)[0];
+            if (!contacts.find(c => c.telefone === contato.telefone)) {
+                contacts.push(contato);
+            }
+        }
+        saveAttempts();
+        loadMainTable();
+        loadAttemptsTable();
+    });
+
+    attemptsTableBody.addEventListener('input', e => {
+        if (e.target.classList.contains('obs-text')) {
+            const i = e.target.getAttribute('data-index');
+            if (attempts[i]) {
+                attempts[i].observacao = e.target.value;
+                saveAttempts();
+            }
+        }
+    });
+
+    clearStorageBtn.addEventListener('click', () => {
+        if (confirm('Deseja limpar todos os dados?')) {
+            localStorage.removeItem('attempts');
+            contacts = [];
+            attempts = [];
+            loadMainTable();
+            loadAttemptsTable();
+            fileInput.value = '';
+        }
+    });
+
+    fileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+            const fileName = file.name.toLowerCase();
+            const fileData = evt.target.result;
+
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, {defval: ''});
+                contacts = json.filter(r => r.Nome && r.Telefone).map(r => ({
+                    nome: r.Nome,
+                    telefone: String(r.Telefone)
+                }));
+            } else {
+                const linhas = fileData.split(/\r?\n/);
+                contacts = linhas.map(linha => {
+                    const partes = linha.split(/[,;\t]/);
+                    const tel = partes.find(p => /\d{8,}/.test(p)) || '';
+                    const nome = partes.find(p => /[a-zA-Z]/.test(p)) || 'Sem nome';
+                    return {nome: nome.trim(), telefone: tel.trim()};
+                }).filter(c => c.telefone.length >= 8);
+            }
+
+            loadMainTable();
+            loadAttemptsTable();
+        };
+
+        if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file, 'utf-8');
+        }
+    });
+
+    loadMainTable();
+    loadAttemptsTable();
+})();
+</script>
+</body>
+</html>
