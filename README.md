@@ -78,7 +78,7 @@ function preencherTabela(data) {
             <td>${nome}</td>
             <td><a href="tel:${telefone}">${telefone}</a></td>
             <td>
-                <button class="ligar" onclick="registrar('${nome}', '${telefone}', 'Ligou')">📞 Ligar</button>
+                <button class="ligar" onclick="registrar('${nome}', '${telefone}', 'Ligou', this)" ondblclick="resetar(this)">📞 Ligar</button>
                 <button class="caixa" onclick="registrar('${nome}', '${telefone}', 'Caixa Postal')">🔴 Caixa</button>
                 <button class="atendeu" onclick="registrar('${nome}', '${telefone}', 'Atendeu')">💚 Atendeu</button>
             </td>
@@ -88,7 +88,7 @@ function preencherTabela(data) {
     });
 }
 
-function registrar(nome, telefone, status) {
+function registrar(nome, telefone, status, btn) {
     document.getElementById('status-' + telefone).innerHTML =
         status === 'Atendeu' ? '💚' :
         status === 'Caixa Postal' ? '🔴' : '🔘';
@@ -99,6 +99,16 @@ function registrar(nome, telefone, status) {
         Status: status,
         Data: new Date().toLocaleString()
     });
+
+    if (status === 'Ligou' && btn) {
+        btn.style.backgroundColor = '#f44336';
+        btn.style.color = 'white';
+    }
+}
+
+function resetar(btn) {
+    btn.style.backgroundColor = '';
+    btn.style.color = '';
 }
 
 function exportarHistorico() {

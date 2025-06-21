@@ -60,7 +60,7 @@
             tr.innerHTML = \`
                 <td>\${c.nome}</td>
                 <td>\${c.telefone}</td>
-                <td><button data-index="\${i}" \${jaLigado ? 'style="background-color: red; color: white;"' : ''}>Ligar</button></td>
+                <td><button data-index="\${i}" \${jaLigado ? 'style="background-color: red; color: white;"' : ''} ondblclick="resetarBotao(this)">Ligar</button></td>
             \`;
             mainTableBody.appendChild(tr);
         });
@@ -93,6 +93,51 @@
         localStorage.setItem('attempts', JSON.stringify(attempts));
     }
 
+    function resetarBotao(btn) {
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+    }
+
+    exportListBtn.addEventListener('click', exportarTentativas);
+    exportHistoryBtn.addEventListener('click', exportarHistorico);
+
+    function exportarTentativas() {
+        if (attempts.length === 0) {
+            alert('Nenhuma tentativa registrada.');
+            return;
+        }
+        const dados = attempts.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status,
+            Observacao: a.observacao,
+            Data: a.data
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dados);
+        XLSX.utils.book_append_sheet(wb, ws, 'Tentativas');
+        XLSX.writeFile(wb, 'tentativas.xlsx');
+    }
+
+    function exportarHistorico() {
+        const historico = attempts.filter(a => a.status);
+        if (historico.length === 0) {
+            alert('Nenhum histórico registrado.');
+            return;
+        }
+        const dados = historico.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status,
+            Observacao: a.observacao,
+            Data: a.data
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dados);
+        XLSX.utils.book_append_sheet(wb, ws, 'Historico');
+        XLSX.writeFile(wb, 'historico_ligacoes.xlsx');
+    }
+
     mainTableBody.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON') {
             const i = e.target.getAttribute('data-index');
@@ -107,7 +152,7 @@
                 return;
             }
             window.open(\`tel:\${telLink}\`, '_self');
-            e.target.style.backgroundColor = '#4CAF50';
+            e.target.style.backgroundColor = '#f44336';
             e.target.style.color = 'white';
             e.target.dataset.clicked = 'true';
             const now = new Date().toISOString();
