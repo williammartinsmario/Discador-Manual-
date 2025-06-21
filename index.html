@@ -60,7 +60,7 @@
             tr.innerHTML = \`
                 <td>\${c.nome}</td>
                 <td>\${c.telefone}</td>
-                <td><button data-index="\${i}" \${jaLigado ? 'style="background-color: red; color: white;"' : ''}>Ligar</button></td>
+                <td><button data-index="\${i}" \${jaLigado ? 'style="background-color: red; color: white;"' : ''} ondblclick="resetarBotao(this)">Ligar</button></td>
             \`;
             mainTableBody.appendChild(tr);
         });
@@ -93,6 +93,11 @@
         localStorage.setItem('attempts', JSON.stringify(attempts));
     }
 
+    function resetarBotao(btn) {
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+    }
+
     mainTableBody.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON') {
             const i = e.target.getAttribute('data-index');
@@ -107,7 +112,7 @@
                 return;
             }
             window.open(\`tel:\${telLink}\`, '_self');
-            e.target.style.backgroundColor = '#4CAF50';
+            e.target.style.backgroundColor = '#f44336';
             e.target.style.color = 'white';
             e.target.dataset.clicked = 'true';
             const now = new Date().toISOString();
