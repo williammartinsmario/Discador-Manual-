@@ -98,6 +98,46 @@
         btn.style.color = '';
     }
 
+    exportListBtn.addEventListener('click', exportarTentativas);
+    exportHistoryBtn.addEventListener('click', exportarHistorico);
+
+    function exportarTentativas() {
+        if (attempts.length === 0) {
+            alert('Nenhuma tentativa registrada.');
+            return;
+        }
+        const dados = attempts.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status,
+            Observacao: a.observacao,
+            Data: a.data
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dados);
+        XLSX.utils.book_append_sheet(wb, ws, 'Tentativas');
+        XLSX.writeFile(wb, 'tentativas.xlsx');
+    }
+
+    function exportarHistorico() {
+        const historico = attempts.filter(a => a.status);
+        if (historico.length === 0) {
+            alert('Nenhum histórico registrado.');
+            return;
+        }
+        const dados = historico.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status,
+            Observacao: a.observacao,
+            Data: a.data
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dados);
+        XLSX.utils.book_append_sheet(wb, ws, 'Historico');
+        XLSX.writeFile(wb, 'historico_ligacoes.xlsx');
+    }
+
     mainTableBody.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON') {
             const i = e.target.getAttribute('data-index');
